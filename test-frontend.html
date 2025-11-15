@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit Agent Video Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .config-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #495057;
+            font-size: 0.9em;
+        }
+
+        .config-group input {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .config-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .controls {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-bar {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #28a745;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16 / 9;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .obstacle-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .obstacle-panel h2 {
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.5em;
+        }
+
+        .obstacle-results {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .obstacle-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .obstacle-item:hover {
+            transform: translateX(5px);
+        }
+
+        .obstacle-item.high {
+            border-left-color: #dc3545;
+        }
+
+        .obstacle-item.medium {
+            border-left-color: #ffc107;
+        }
+
+        .obstacle-item.low {
+            border-left-color: #28a745;
+        }
+
+        .obstacle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .obstacle-time {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .obstacle-recommendation {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .obstacle-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .obstacle-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .obstacle-list li.high {
+            border-left-color: #dc3545;
+        }
+
+        .obstacle-list li.medium {
+            border-left-color: #ffc107;
+        }
+
+        .obstacle-list li.low {
+            border-left-color: #28a745;
+        }
+
+        .obstacle-type {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .obstacle-details {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 LiveKit Agent Video Test</h1>
+            <p>Test video streaming, obstacle detection, and voice interaction</p>
+        </div>
+
+        <div class="config-panel">
+            <div class="config-grid">
+                <div class="config-group">
+                    <label for="livekitUrl">LiveKit Server URL</label>
+                    <input type="text" id="livekitUrl" placeholder="ws://localhost:7880" value="ws://localhost:7880">
+                </div>
+                <div class="config-group">
+                    <label for="apiUrl">API Server URL</label>
+                    <input type="text" id="apiUrl" placeholder="http://localhost:8000" value="http://localhost:8000">
+                </div>
+                <div class="config-group">
+                    <label for="roomName">Room Name</label>
+                    <input type="text" id="roomName" placeholder="test-room" value="">
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <div class="status-text" id="statusText">Disconnected</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" id="connectBtn">🔌 Connect</button>
+            <button class="btn-danger" id="disconnectBtn" disabled>❌ Disconnect</button>
+            <button class="btn-secondary" id="toggleVideoBtn" disabled>📹 Toggle Video</button>
+            <button class="btn-secondary" id="toggleAudioBtn" disabled>🎤 Toggle Audio</button>
+        </div>
+
+        <div class="video-grid">
+            <div class="video-container">
+                <div class="video-label">📹 Your Camera</div>
+                <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+            <div class="video-container">
+                <div class="video-label">🤖 Agent Audio</div>
+                <video id="remoteVideo" autoplay playsinline></video>
+            </div>
+        </div>
+
+        <div class="obstacle-panel">
+            <h2>🔍 Obstacle Detection Results</h2>
+            <div class="obstacle-results" id="obstacleResults">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <p>No obstacle detections yet. Connect and start streaming to see results.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import LiveKit client from CDN
+        import { Room, RoomEvent, Track, TrackPublication, RemoteTrack } from 'https://unpkg.com/livekit-client@latest/dist/livekit-client.esm.js';
+
+        // State management
+        let room = null;
+        let localVideoTrack = null;
+        let localAudioTrack = null;
+        let isConnected = false;
+
+        // UI Elements
+        const livekitUrlInput = document.getElementById('livekitUrl');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const roomNameInput = document.getElementById('roomName');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const obstacleResults = document.getElementById('obstacleResults');
+
+        // Generate unique room name if not provided
+        function getRoomName() {
+            const input = roomNameInput.value.trim();
+            return input || `test-room-${Date.now()}`;
+        }
+
+        // Generate unique participant identity
+        function getParticipantIdentity() {
+            return `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        // Update status
+        function updateStatus(message, connected = false) {
+            statusText.textContent = message;
+            statusIndicator.classList.toggle('connected', connected);
+            isConnected = connected;
+            
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            toggleVideoBtn.disabled = !connected;
+            toggleAudioBtn.disabled = !connected;
+        }
+
+        // Get access token from backend
+        async function getAccessToken() {
+            const apiUrl = apiUrlInput.value.trim();
+            const roomName = getRoomName();
+            const participantIdentity = getParticipantIdentity();
+
+            if (!apiUrl) {
+                throw new Error('API URL is required');
+            }
+
+            const response = await fetch(`${apiUrl}/api/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    room_name: roomName,
+                    participant_identity: participantIdentity,
+                    participant_name: 'Test User',
+                    ttl_seconds: 3600,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to get token: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            return { token: data.token, roomName, participantIdentity };
+        }
+
+        // Connect to room
+        connectBtn.addEventListener('click', async () => {
+            try {
+                updateStatus('Connecting...', false);
+
+                // Validate inputs
+                const livekitUrl = livekitUrlInput.value.trim();
+                if (!livekitUrl) {
+                    throw new Error('LiveKit URL is required');
+                }
+
+                // Get access token
+                const { token, roomName, participantIdentity } = await getAccessToken();
+                console.log('Got access token for room:', roomName);
+
+                // Create room instance
+                room = new Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    publishDefaults: {
+                        videoCodec: 'vp8',
+                        videoResolution: { width: 1280, height: 720 },
+                    },
+                });
+
+                // Set up event handlers
+                room.on(RoomEvent.Connected, () => {
+                    console.log('Connected to room:', roomName);
+                    updateStatus(`Connected to room: ${roomName}`, true);
+                });
+
+                room.on(RoomEvent.Disconnected, (reason) => {
+                    console.log('Disconnected from room:', reason);
+                    updateStatus('Disconnected', false);
+                    cleanup();
+                });
+
+                room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    console.log('Track subscribed:', track.kind, 'from', participant.identity);
+                    
+                    if (track.kind === Track.Kind.Video) {
+                        const element = track.attach();
+                        if (remoteVideo.srcObject) {
+                            remoteVideo.srcObject.getTracks().forEach(t => t.stop());
+                        }
+                        remoteVideo.srcObject = new MediaStream([element]);
+                    } else if (track.kind === Track.Kind.Audio) {
+                        const element = track.attach();
+                        if (remoteVideo.srcObject) {
+                            const existingStream = remoteVideo.srcObject;
+                            existingStream.addTrack(element);
+                        } else {
+                            remoteVideo.srcObject = new MediaStream([element]);
+                        }
+                    }
+                });
+
+                room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                    console.log('Track unsubscribed:', track.kind);
+                    track.detach();
+                });
+
+                room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+                    console.log('Data received:', topic, 'from', participant?.identity);
+                    
+                    if (topic === 'obstacle_detection') {
+                        try {
+                            const data = JSON.parse(new TextDecoder().decode(payload));
+                            displayObstacleDetection(data);
+                        } catch (e) {
+                            console.error('Error parsing obstacle detection data:', e);
+                        }
+                    }
+                });
+
+                room.on(RoomEvent.ParticipantConnected, (participant) => {
+                    console.log('Participant connected:', participant.identity);
+                    if (participant.identity.startsWith('agent-')) {
+                        updateStatus(`Agent connected to room: ${roomName}`, true);
+                    }
+                });
+
+                room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+                    console.log('Participant disconnected:', participant.identity);
+                });
+
+                room.on(RoomEvent.TrackPublished, (publication, participant) => {
+                    console.log('Track published:', publication.kind, 'by', participant.identity);
+                });
+
+                room.on(RoomEvent.TrackMuted, (publication, participant) => {
+                    console.log('Track muted:', publication.kind, 'by', participant.identity);
+                });
+
+                room.on(RoomEvent.TrackUnmuted, (publication, participant) => {
+                    console.log('Track unmuted:', publication.kind, 'by', participant.identity);
+                });
+
+                // Connect to room
+                await room.connect(livekitUrl, token);
+                console.log('Room connection initiated');
+
+                // Get user media
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user',
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    },
+                });
+
+                // Create and publish video track
+                localVideoTrack = await room.localParticipant.createCameraTrack({
+                    resolution: { width: 1280, height: 720 },
+                });
+                await room.localParticipant.publishTrack(localVideoTrack, {
+                    source: Track.Source.SOURCE_CAMERA,
+                });
+
+                // Attach local video
+                localVideo.srcObject = stream;
+                // Stop duplicate video tracks
+                localVideo.srcObject.getVideoTracks().forEach(track => {
+                    if (track !== localVideoTrack.mediaStreamTrack) {
+                        track.stop();
+                    }
+                });
+
+                // Create and publish audio track
+                localAudioTrack = await room.localParticipant.createMicrophoneTrack();
+                await room.localParticipant.publishTrack(localAudioTrack, {
+                    source: Track.Source.SOURCE_MICROPHONE,
+                });
+
+                console.log('Published video and audio tracks');
+                updateStatus(`Streaming to room: ${roomName}`, true);
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus(`Error: ${error.message}`, false);
+                alert(`Connection failed: ${error.message}\n\nPlease check:\n1. LiveKit server is running\n2. API server is running\n3. URLs are correct\n4. Camera/microphone permissions are granted`);
+            }
+        });
+
+        // Disconnect from room
+        disconnectBtn.addEventListener('click', async () => {
+            if (room) {
+                await room.disconnect();
+            }
+            cleanup();
+            updateStatus('Disconnected', false);
+        });
+
+        // Toggle video
+        toggleVideoBtn.addEventListener('click', async () => {
+            if (localVideoTrack) {
+                try {
+                    if (localVideoTrack.isMuted) {
+                        await localVideoTrack.unmute();
+                        toggleVideoBtn.textContent = '📹 Disable Video';
+                    } else {
+                        await localVideoTrack.mute();
+                        toggleVideoBtn.textContent = '📹 Enable Video';
+                    }
+                } catch (error) {
+                    console.error('Error toggling video:', error);
+                }
+            }
+        });
+
+        // Toggle audio
+        toggleAudioBtn.addEventListener('click', async () => {
+            if (localAudioTrack) {
+                try {
+                    if (localAudioTrack.isMuted) {
+                        await localAudioTrack.unmute();
+                        toggleAudioBtn.textContent = '🎤 Mute Audio';
+                    } else {
+                        await localAudioTrack.mute();
+                        toggleAudioBtn.textContent = '🎤 Unmute Audio';
+                    }
+                } catch (error) {
+                    console.error('Error toggling audio:', error);
+                }
+            }
+        });
+
+        // Display obstacle detection results
+        function displayObstacleDetection(data) {
+            // Remove empty state if present
+            const emptyState = obstacleResults.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const timestamp = new Date(data.timestamp * 1000).toLocaleTimeString();
+            const severity = data.recommendation?.toLowerCase().includes('caution') || 
+                           data.recommendation?.toLowerCase().includes('danger') ? 'high' :
+                           data.recommendation?.toLowerCase().includes('clear') ? 'low' : 'medium';
+
+            let html = `<div class="obstacle-item ${severity}">`;
+            html += `<div class="obstacle-header">`;
+            html += `<div class="obstacle-recommendation">${data.recommendation || 'No recommendation'}</div>`;
+            html += `<div class="obstacle-time">${timestamp}</div>`;
+            html += `</div>`;
+
+            if (data.obstacles && data.obstacles.length > 0) {
+                html += `<ul class="obstacle-list">`;
+                data.obstacles.forEach(obstacle => {
+                    const obsSeverity = obstacle.severity?.toLowerCase() || 'low';
+                    html += `<li class="${obsSeverity}">`;
+                    html += `<div class="obstacle-type">${obstacle.type || 'Unknown'}</div>`;
+                    html += `<div class="obstacle-details">`;
+                    html += `${obstacle.description || 'No description'} • `;
+                    html += `Distance: ${obstacle.distance_estimate || 'unknown'} • `;
+                    html += `Severity: ${obstacle.severity || 'low'}`;
+                    html += `</div>`;
+                    html += `</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            html += `</div>`;
+
+            obstacleResults.insertAdjacentHTML('afterbegin', html);
+
+            // Keep only last 20 detections
+            const items = obstacleResults.querySelectorAll('.obstacle-item');
+            if (items.length > 20) {
+                items[items.length - 1].remove();
+            }
+
+            // Scroll to top
+            obstacleResults.scrollTop = 0;
+        }
+
+        // Cleanup
+        function cleanup() {
+            if (localVideoTrack) {
+                localVideoTrack.stop();
+                localVideoTrack = null;
+            }
+            if (localAudioTrack) {
+                localAudioTrack.stop();
+                localAudioTrack = null;
+            }
+            if (localVideo.srcObject) {
+                localVideo.srcObject.getTracks().forEach(track => track.stop());
+                localVideo.srcObject = null;
+            }
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (room) {
+                room.disconnect();
+            }
+            cleanup();
+        });
+
+        // Auto-generate room name on load
+        window.addEventListener('load', () => {
+            if (!roomNameInput.value.trim()) {
+                roomNameInput.value = `test-room-${Date.now()}`;
+            }
+        });
+    </script>
+</body>
+</html>
+
