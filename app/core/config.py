@@ -35,6 +35,10 @@ class Settings(BaseSettings):
         ...,
         description="Google API key for Gemini Vision and Realtime API",
     )
+    google_maps_api_key: Optional[str] = Field(
+        default=None,
+        description="Google Maps API key for navigation and place search (optional if using external MCP server)",
+    )
 
     # Mistral AI Configuration
     mistral_api_key: str = Field(

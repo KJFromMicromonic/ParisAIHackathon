@@ -3,6 +3,7 @@
 from typing import Optional
 
 import livekit.rtc as rtc
+from google.genai.types import Modality
 from livekit.agents import AgentSession, RoomInputOptions, mcp
 from livekit.agents.log import logger
 from livekit.plugins import google, silero
@@ -18,6 +19,9 @@ class AudioPipeline:
     
     This pipeline uses Gemini Live Realtime with native video input enabled,
     allowing the model to see and understand video frames automatically.
+    
+    The pipeline is configured to use Gemini Live for text generation only,
+    with ElevenLabs TTS handling all audio output for natural voice synthesis.
     """
 
     def __init__(self, room: rtc.Room):
@@ -48,9 +52,10 @@ class AudioPipeline:
             vad_instance = silero.VAD.load()
 
             # Create LLM instance (Gemini Live Realtime with video support)
+            # Configure to output text only so ElevenLabs TTS handles audio output
             llm = google.realtime.RealtimeModel(
                 model=settings.gemini_model,
-                voice=settings.gemini_voice,
+                modalities=[Modality.TEXT],  # Text-only output, ElevenLabs TTS handles audio
                 instructions=self._get_agent_instructions(),
             )
 

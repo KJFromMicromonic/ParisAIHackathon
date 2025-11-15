@@ -37,6 +37,7 @@ Mobile (WebRTC) → LiveKit Room → LiveKit Agent (Python)
   - Results published via DataChannel for frontend
 - **Bidirectional Voice Interaction**: Natural voice conversation using Gemini Live Realtime
 - **MCP Tool Integration**: Extensible tool system via Model Context Protocol (MCP) servers
+- **Google Maps Navigation**: Built-in Google Maps MCP server for finding places and getting directions
 - **Production-Ready**: Error handling, logging, graceful shutdown, and Docker support
 - **LiveKit Native**: All media processing uses LiveKit SDK (no custom WebRTC servers)
 
@@ -46,6 +47,7 @@ Mobile (WebRTC) → LiveKit Room → LiveKit Agent (Python)
 - LiveKit Server (Cloud or self-hosted)
 - API Keys:
   - Google API Key (for Gemini Vision and Realtime API)
+  - Google Maps API Key (optional, for navigation features - see [Google Maps Integration Guide](docs/google-maps-integration.md))
   - Mistral API Key (for Voxstral STT)
   - ElevenLabs API Key (for TTS)
   - LiveKit API Key and Secret
@@ -334,11 +336,50 @@ mypy app/
 - Check agent logs for STT/TTS errors
 - Ensure microphone permissions are granted on client
 
+## Google Maps Integration
+
+The agent includes a built-in Google Maps MCP server for navigation assistance. This allows users to:
+
+- **Find nearby places**: "Find nearby restaurants", "Where is the nearest pharmacy?"
+- **Get directions**: "How do I get to the Eiffel Tower?", "Give me walking directions to 123 Main Street"
+- **Geocode addresses**: Convert addresses to coordinates and vice versa
+
+### Quick Setup
+
+1. **Get a Google Maps API Key**:
+   - Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+   - Enable Places API, Directions API, and Geocoding API
+   - Create an API key
+
+2. **Configure Environment Variables**:
+   ```bash
+   GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+   MCP_SERVER_URLS=http://localhost:8080
+   ```
+
+3. **Run the Google Maps MCP Server** (choose one):
+   
+   **Local Development:**
+   ```bash
+   python scripts/run_google_maps_mcp.py
+   ```
+   
+   **Production (Cloud Run):**
+   ```bash
+   export GOOGLE_MAPS_API_KEY=your_api_key_here
+   ./scripts/deploy-google-maps-mcp.sh
+   ```
+
+4. **Start Your Agent** (the agent will automatically connect to the MCP server)
+
+For detailed setup instructions, see the [Google Maps Integration Guide](docs/google-maps-integration.md) and [Cloud Run Deployment Guide](docs/cloud-run-deployment.md).
+
 ## Additional Resources
 
 - [LiveKit Agents Documentation](https://docs.livekit.io/agents/)
 - [Gemini Live API](https://ai.google.dev/gemini-api/docs/live)
 - [MCP Protocol](https://modelcontextprotocol.io/)
+- [Google Maps Integration Guide](./docs/google-maps-integration.md) - Complete guide for setting up Google Maps navigation
 - [Worker Entrypoint Best Practices](./docs/worker-entrypoint-best-practices.md)
 - [Frontend Testing Guide](./FRONTEND_TESTING.md) - Complete guide for testing video streaming from frontend
 

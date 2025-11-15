@@ -42,10 +42,12 @@ These have defaults but can be customized:
 
 ```bash
 # Gemini model (default: gemini-2.0-flash-exp)
+# Note: Gemini is configured for text-only output; ElevenLabs TTS handles audio
 GEMINI_MODEL=gemini-2.0-flash-exp
 
-# Gemini voice (default: Puck)
-GEMINI_VOICE=Puck
+# Gemini voice (deprecated - not used when using ElevenLabs TTS)
+# This setting is ignored since Gemini outputs text only
+# GEMINI_VOICE=Puck
 
 # Voxstral model (default: voxtral-mini-2507)
 VOXSTRAL_MODEL=voxtral-mini-2507
