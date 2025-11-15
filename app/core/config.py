@@ -78,8 +78,16 @@ class Settings(BaseSettings):
 
     # MCP Server Configuration
     mcp_server_urls: str = Field(
-        default="https://whatsapp-mcp-794750095859.europe-west1.run.app",
-        description="Comma-separated list of MCP server URLs (e.g., https://server1.com,https://server2.com). Includes WhatsApp API by default.",
+        default="",
+        description="Comma-separated list of MCP server URLs (e.g., https://server1.com,https://server2.com). WhatsApp MCP server is added automatically if whatsapp_mcp_server_enabled is true.",
+    )
+    whatsapp_mcp_server_enabled: bool = Field(
+        default=True,
+        description="If True, start local WhatsApp MCP server wrapper. If False, use WhatsApp API directly (requires MCP protocol support).",
+    )
+    whatsapp_mcp_server_port: int = Field(
+        default=8081,
+        description="Port for local WhatsApp MCP server (default: 8081)",
     )
     mcp_server_headers: str = Field(
         default="{}",

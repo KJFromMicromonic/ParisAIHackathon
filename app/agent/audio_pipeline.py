@@ -1,5 +1,9 @@
 """Audio pipeline wrapper around AgentSession with Live Video input."""
 
+import asyncio
+import atexit
+import os
+from pathlib import Path
 from typing import Optional
 
 import livekit.rtc as rtc
@@ -33,6 +37,7 @@ class AudioPipeline:
         """
         self._room = room
         self._session: Optional[AgentSession] = None
+        self._whatsapp_server_process: Optional[asyncio.subprocess.Process] = None
 
     async def start(self) -> None:
         """Start the audio pipeline with Live Video input enabled."""
@@ -41,6 +46,9 @@ class AudioPipeline:
             return
 
         try:
+            # Start WhatsApp MCP server wrapper if enabled
+            await self._start_whatsapp_mcp_server()
+
             # Create MCP server configurations
             mcp_servers = self._create_mcp_servers()
 
@@ -107,14 +115,132 @@ class AudioPipeline:
             self._session = None
             logger.info("Audio pipeline stopped")
 
+            # Stop WhatsApp MCP server wrapper
+            await self._stop_whatsapp_mcp_server()
+
         except Exception as e:
             logger.error(f"Error stopping audio pipeline: {e}", exc_info=True)
+
+    async def _start_whatsapp_mcp_server(self) -> None:
+        """
+        Start local WhatsApp MCP server wrapper if enabled.
+
+        The wrapper implements MCP protocol and translates calls to the REST API.
+        """
+        if not settings.whatsapp_mcp_server_enabled:
+            logger.debug("WhatsApp MCP server wrapper is disabled")
+            return
+
+        try:
+            import sys
+
+            # Get path to WhatsApp MCP server run script
+            script_path = Path(__file__).parent.parent / "scripts" / "run_whatsapp_mcp.py"
+            if not script_path.exists():
+                logger.warning(f"WhatsApp MCP server script not found: {script_path}")
+                return
+
+            # Start FastMCP server in background using streamable-http transport
+            # Use the run script to start the server
+            port = settings.whatsapp_mcp_server_port
+            
+            env = os.environ.copy()
+            env["WHATSAPP_MCP_SERVER_PORT"] = str(port)
+            env["WHATSAPP_MCP_SERVER_HOST"] = "127.0.0.1"
+            
+            logger.info(f"Starting WhatsApp MCP server on port {port}...")
+            self._whatsapp_server_process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                str(script_path),
+                env=env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            # Wait for server to start and verify it's running
+            max_wait_time = 10  # Wait up to 10 seconds
+            check_interval = 0.5  # Check every 0.5 seconds
+            waited = 0
+            
+            while waited < max_wait_time:
+                await asyncio.sleep(check_interval)
+                waited += check_interval
+                
+                # Check if process crashed
+                if self._whatsapp_server_process.returncode is not None:
+                    # Read stderr to see what went wrong
+                    stderr_output = await self._whatsapp_server_process.stderr.read()
+                    error_msg = stderr_output.decode() if stderr_output else "Unknown error"
+                    logger.error(
+                        f"WhatsApp MCP server failed to start (exit code: {self._whatsapp_server_process.returncode})\n"
+                        f"Error output: {error_msg}"
+                    )
+                    self._whatsapp_server_process = None
+                    return
+                
+                # Try to connect to verify server is ready
+                try:
+                    import httpx
+                    async with httpx.AsyncClient(timeout=1.0) as client:
+                        # FastMCP streamable-http exposes /mcp endpoint
+                        response = await client.get(f"http://127.0.0.1:{port}/mcp")
+                        if response.status_code in (200, 405):  # 405 Method Not Allowed is OK for GET
+                            logger.info(
+                                f"WhatsApp MCP server wrapper started successfully on http://127.0.0.1:{port}/mcp"
+                            )
+                            # Register cleanup on exit
+                            atexit.register(self._cleanup_whatsapp_server)
+                            return
+                except (httpx.ConnectError, httpx.TimeoutException):
+                    # Server not ready yet, continue waiting
+                    continue
+                except Exception as e:
+                    logger.debug(f"Health check error (server may still be starting): {e}")
+                    continue
+            
+            # If we get here, server didn't start in time
+            logger.error(
+                f"WhatsApp MCP server did not become ready within {max_wait_time} seconds"
+            )
+            if self._whatsapp_server_process:
+                self._whatsapp_server_process.terminate()
+                self._whatsapp_server_process = None
+
+        except Exception as e:
+            logger.error(
+                f"Failed to start WhatsApp MCP server wrapper: {e}",
+                exc_info=True,
+            )
+
+    async def _stop_whatsapp_mcp_server(self) -> None:
+        """Stop the WhatsApp MCP server wrapper."""
+        if self._whatsapp_server_process:
+            try:
+                self._whatsapp_server_process.terminate()
+                await asyncio.wait_for(self._whatsapp_server_process.wait(), timeout=5.0)
+                logger.info("WhatsApp MCP server wrapper stopped")
+            except asyncio.TimeoutError:
+                logger.warning("WhatsApp MCP server wrapper did not stop gracefully, killing")
+                self._whatsapp_server_process.kill()
+                await self._whatsapp_server_process.wait()
+            except Exception as e:
+                logger.error(f"Error stopping WhatsApp MCP server: {e}", exc_info=True)
+            finally:
+                self._whatsapp_server_process = None
+
+    def _cleanup_whatsapp_server(self) -> None:
+        """Cleanup function for atexit."""
+        if self._whatsapp_server_process:
+            try:
+                self._whatsapp_server_process.terminate()
+            except Exception:
+                pass
 
     def _create_mcp_servers(self) -> list[mcp.MCPServerHTTP]:
         """
         Create MCP server instances from settings.
 
-        Includes WhatsApp API as an MCP server using the recommended MCP integration pattern.
+        Includes local WhatsApp MCP server wrapper if enabled, following the recommended MCP integration pattern.
         MCP servers are automatically loaded and tools are made available to the agent.
 
         Returns:
@@ -138,25 +264,18 @@ class AudioPipeline:
                     exc_info=True,
                 )
 
-        # Add WhatsApp API as MCP server (following MCP integration pattern)
-        # The WhatsApp API URL should be added to MCP_SERVER_URLS, but we also add it here
-        # if it's configured separately to ensure it's always included
-        whatsapp_url = settings.whatsapp_api_url
-        if whatsapp_url and whatsapp_url not in urls:
+        # Add local WhatsApp MCP server wrapper if enabled
+        # FastMCP uses streamable-http transport, so URL should end with /mcp
+        if settings.whatsapp_mcp_server_enabled:
+            whatsapp_mcp_url = f"http://127.0.0.1:{settings.whatsapp_mcp_server_port}/mcp"
             try:
-                whatsapp_headers = settings.get_whatsapp_api_headers()
-                servers.append(
-                    mcp.MCPServerHTTP(
-                        whatsapp_url,
-                        headers=whatsapp_headers,
-                    )
-                )
+                servers.append(mcp.MCPServerHTTP(whatsapp_mcp_url))
                 logger.info(
-                    f"Added WhatsApp API as MCP server: {whatsapp_url}"
+                    f"Added WhatsApp MCP server wrapper: {whatsapp_mcp_url}"
                 )
             except Exception as e:
                 logger.warning(
-                    f"Failed to add WhatsApp API as MCP server: {e}",
+                    f"Failed to add WhatsApp MCP server wrapper: {e}",
                     exc_info=True,
                 )
 
