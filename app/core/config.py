@@ -78,8 +78,8 @@ class Settings(BaseSettings):
 
     # MCP Server Configuration
     mcp_server_urls: str = Field(
-        default="",
-        description="Comma-separated list of MCP server URLs (e.g., https://server1.com,https://server2.com)",
+        default="https://whatsapp-mcp-794750095859.europe-west1.run.app",
+        description="Comma-separated list of MCP server URLs (e.g., https://server1.com,https://server2.com). Includes WhatsApp API by default.",
     )
     mcp_server_headers: str = Field(
         default="{}",
@@ -118,6 +118,16 @@ class Settings(BaseSettings):
         description="DataChannel topic for obstacle detection results",
     )
 
+    # WhatsApp API Configuration
+    whatsapp_api_url: str = Field(
+        default="https://whatsapp-mcp-794750095859.europe-west1.run.app",
+        description="WhatsApp API base URL",
+    )
+    whatsapp_api_headers: str = Field(
+        default="{}",
+        description="JSON object with headers for WhatsApp API requests (e.g., {\"Authorization\": \"Bearer token\"})",
+    )
+
     def get_mcp_server_urls(self) -> List[str]:
         """
         Parse MCP server URLs from comma-separated string.
@@ -142,6 +152,22 @@ class Settings(BaseSettings):
             return {}
         try:
             return json.loads(self.mcp_server_headers)
+        except json.JSONDecodeError:
+            return {}
+
+    def get_whatsapp_api_headers(self) -> dict[str, str]:
+        """
+        Parse WhatsApp API headers from JSON string.
+
+        Returns:
+            Dictionary with headers for WhatsApp API requests
+        """
+        import json
+
+        if not self.whatsapp_api_headers:
+            return {}
+        try:
+            return json.loads(self.whatsapp_api_headers)
         except json.JSONDecodeError:
             return {}
 

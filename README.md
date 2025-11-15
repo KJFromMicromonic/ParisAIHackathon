@@ -38,6 +38,10 @@ Mobile (WebRTC) → LiveKit Room → LiveKit Agent (Python)
 - **Bidirectional Voice Interaction**: Natural voice conversation using Gemini Live Realtime
 - **MCP Tool Integration**: Extensible tool system via Model Context Protocol (MCP) servers
 - **Google Maps Navigation**: Built-in Google Maps MCP server for finding places and getting directions
+- **WhatsApp Integration**: Full WhatsApp API integration via LiveKit function tools
+  - Search contacts, read messages, send messages
+  - Manage chats and conversations
+  - Send files and audio messages
 - **Production-Ready**: Error handling, logging, graceful shutdown, and Docker support
 - **LiveKit Native**: All media processing uses LiveKit SDK (no custom WebRTC servers)
 
@@ -94,6 +98,8 @@ See `.env.example` for all available configuration options. Key variables:
 - `MISTRAL_API_KEY`: Mistral API key for Voxstral STT
 - `ELEVENLABS_API_KEY`: ElevenLabs API key for TTS
 - `MCP_SERVER_URLS`: Comma-separated list of MCP server URLs
+- `WHATSAPP_API_URL`: WhatsApp API base URL (default: https://whatsapp-mcp-794750095859.europe-west1.run.app)
+- `WHATSAPP_API_HEADERS`: JSON object with headers for WhatsApp API requests (optional)
 
 ### MCP Server Configuration
 
@@ -103,6 +109,54 @@ MCP servers are hosted separately (e.g., on Cloud Run). Configure them in `.env`
 MCP_SERVER_URLS=https://maps-mcp-server.com,https://airbnb-mcp-server.com
 MCP_SERVER_HEADERS={"https://maps-mcp-server.com": {"Authorization": "Bearer token"}}
 ```
+
+### WhatsApp Integration
+
+The agent includes full WhatsApp API integration via MCP (Model Context Protocol) servers. The WhatsApp API is automatically added to the MCP servers list and tools are loaded using the recommended MCP integration pattern.
+
+**Configuration:**
+
+The WhatsApp API is configured via MCP server settings:
+
+```env
+# MCP Server URLs (WhatsApp API included by default)
+MCP_SERVER_URLS=https://whatsapp-mcp-794750095859.europe-west1.run.app
+
+# Optional: Add headers if authentication is required
+MCP_SERVER_HEADERS={"https://whatsapp-mcp-794750095859.europe-west1.run.app": {"Authorization": "Bearer your_token"}}
+
+# WhatsApp API Configuration (for reference)
+WHATSAPP_API_URL=https://whatsapp-mcp-794750095859.europe-west1.run.app
+WHATSAPP_API_HEADERS={}
+```
+
+The WhatsApp API URL is automatically included in `MCP_SERVER_URLS` by default. Tools are loaded automatically through LiveKit's MCP integration.
+
+**Available WhatsApp Tools:**
+
+- `search_contacts`: Search WhatsApp contacts by name or phone number
+- `list_chats`: List and browse WhatsApp chats with pagination
+- `get_chat`: Get detailed information about a specific chat
+- `get_direct_chat_by_contact`: Find direct chat with a contact by phone number
+- `get_contact_chats`: Get all chats involving a specific contact
+- `list_messages`: Search and filter messages with optional context
+- `get_last_interaction`: Get the most recent message with a contact
+- `get_message_context`: Get context around a specific message
+- `send_message`: Send text messages to contacts or groups
+- `send_file`: Send files (images, videos, documents) via WhatsApp
+- `send_audio`: Send audio files as WhatsApp voice messages
+- `download_media`: Download media from WhatsApp messages
+
+**Usage Examples:**
+
+Users can interact with WhatsApp through voice commands:
+- "Search for contacts named John"
+- "Show me my recent chats"
+- "Read messages from Sarah"
+- "Send a message to John saying I'll be there in 10 minutes"
+- "What was the last message from Mom?"
+
+The agent will automatically use the appropriate WhatsApp tools to fulfill these requests.
 
 ## Usage
 

@@ -62,9 +62,11 @@ class AudioPipeline:
             # Create TTS instance
             tts = create_tts()
 
-            # Create simple Agent (Gemini Live Realtime handles vision natively)
+            # Create Agent (tools come from MCP servers automatically)
             from livekit.agents import Agent
-            agent = Agent(instructions=self._get_agent_instructions())
+            agent = Agent(
+                instructions=self._get_agent_instructions(),
+            )
 
             # Create AgentSession with VAD for streaming STT support
             self._session = AgentSession(
@@ -112,6 +114,9 @@ class AudioPipeline:
         """
         Create MCP server instances from settings.
 
+        Includes WhatsApp API as an MCP server using the recommended MCP integration pattern.
+        MCP servers are automatically loaded and tools are made available to the agent.
+
         Returns:
             List of MCP server instances
         """
@@ -119,12 +124,44 @@ class AudioPipeline:
         urls = settings.get_mcp_server_urls()
         headers_map = settings.get_mcp_server_headers()
 
+        # Add configured MCP servers from MCP_SERVER_URLS
         for url in urls:
-            headers = headers_map.get(url, {})
-            servers.append(mcp.MCPServerHTTP(url, headers=headers))
+            if not url or url.strip() == "":
+                continue
+            try:
+                headers = headers_map.get(url, {})
+                servers.append(mcp.MCPServerHTTP(url, headers=headers))
+                logger.debug(f"Added MCP server: {url}")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to create MCP server for {url}: {e}",
+                    exc_info=True,
+                )
 
-        logger.debug(
-            f"Created {len(servers)} MCP server connections",
+        # Add WhatsApp API as MCP server (following MCP integration pattern)
+        # The WhatsApp API URL should be added to MCP_SERVER_URLS, but we also add it here
+        # if it's configured separately to ensure it's always included
+        whatsapp_url = settings.whatsapp_api_url
+        if whatsapp_url and whatsapp_url not in urls:
+            try:
+                whatsapp_headers = settings.get_whatsapp_api_headers()
+                servers.append(
+                    mcp.MCPServerHTTP(
+                        whatsapp_url,
+                        headers=whatsapp_headers,
+                    )
+                )
+                logger.info(
+                    f"Added WhatsApp API as MCP server: {whatsapp_url}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to add WhatsApp API as MCP server: {e}",
+                    exc_info=True,
+                )
+
+        logger.info(
+            f"Created {len(servers)} MCP server connection(s)",
             extra={"mcp_server_count": len(servers)},
         )
 
@@ -143,6 +180,34 @@ class AudioPipeline:
 2. Find nearby places using Google Maps (via MCP tools)
 3. Get directions to locations (via MCP tools)
 4. Search and book accommodations (via MCP tools)
+5. Manage WhatsApp communications (search contacts, read messages, send messages)
+
+WhatsApp Capabilities:
+- Search for contacts by name or phone number using search_contacts
+- List and browse WhatsApp chats using list_chats (check for unread messages)
+- Read messages from chats using list_messages or get_chat
+- Send text messages using send_message
+- Send files using send_file
+- Send audio messages using send_audio
+- Get message context using get_message_context
+- Download media from messages using download_media
+
+IMPORTANT WhatsApp Behavior:
+- When the user starts a conversation or asks about messages, ALWAYS proactively check for unread messages by calling list_chats first
+- Look for chats with unread_count > 0 or unread indicators in the response
+- When you see unread messages, immediately inform the user and offer to read them
+- Use list_messages with chat_jid to read messages from specific chats
+- Always confirm before sending messages
+- Read messages clearly and provide full context
+- Help users find contacts by name or phone number
+- Summarize conversations when asked
+- Be careful with sensitive information
+
+When user asks about messages or WhatsApp:
+1. First call list_chats to see all chats and check for unread messages
+2. If there are unread messages, inform the user immediately
+3. Ask if they want to read the unread messages
+4. Use list_messages with the chat_jid to read messages from specific chats
 
 Always:
 - Speak clearly and provide detailed descriptions
